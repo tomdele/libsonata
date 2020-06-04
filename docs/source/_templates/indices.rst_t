@@ -1,0 +1,9 @@
+{{ title }}
+{{ "=" * title | length }}
+
+.. toctree::
+   :hidden:
+
+{% for file in files %}
+   {{ file -}}
+{% endfor %}

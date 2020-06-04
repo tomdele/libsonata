@@ -5,4 +5,4 @@ C++ API
    :hidden:
    :glob:
 
-   cpp/**
+   cpp/index_*
