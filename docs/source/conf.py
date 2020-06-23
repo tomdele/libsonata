@@ -36,6 +36,8 @@ release = version
 
 # -- General configuration ---------------------------------------------------
 
+html_static_path = ["_static"]
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -189,6 +191,7 @@ def _write_kind_indices(app):
 
 
 def setup(app):
+    app.add_css_file("custom.css")
     app.connect("autodoc-process-docstring", _process_pybind_docstrings)
     app.connect("autodoc-process-signature", _process_pybind_signature)
     app.connect("builder-inited", _write_kind_indices)

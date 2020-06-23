@@ -1,0 +1,66 @@
+/* make the section titles bold */
+.breathe-sectiondef-title {
+  font-size: initial;
+  font-weight: bold;
+}
+
+/* make separation of classes and functions clearer match <hr> styling */
+.breathe-sectiondef > dl[class] {
+  border-bottom: .05rem dotted rgba(0,0,0,.26);
+  margin-bottom: 1em;
+}
+
+/* Reduce font size and spacing for autodoc output */
+/* Based on haiku theme font sizing */
+.breathe-sectiondef {
+  font-size: 90%;
+}
+
+/* reduce left margin on lists */
+.md-typeset .breathe-sectiondef dd {
+  margin: 0.5em 0 0.5em 1.25em;
+}
+
+.md-typeset .breathe-sectiondef dd p {
+  margin: 0.5em 0;
+}
+
+/* keep classes etc. in normal font size. see .md-typeset */
+.breathe-sectiondef > dl[class] > dt[id] {
+  font-size: 0.8rem;
+}
+
+/* Size methods etc. consistent with other headings */
+.breathe-sectiondef > dl[class] > dd > dl[class] > dt > code {
+  font-size: 100%;
+}
+
+.breathe-sectiondef > dl[class] > dd > dl[class] > dd > p {
+  margin: 0.5em 0em;
+}
+
+.breathe-sectiondef > dl[class] > dd > dl[class] > *,
+.breathe-sectiondef > dl[class] > dd > dl[class] > dd > * {
+  margin-top: 0em;
+}
+
+/* left align field lists with text in methods */
+.breathe-sectiondef > dl[class] > dd > dl[class] > dd > ul {
+  margin-left: 0em;
+}
+
+.md-typeset .breathe-sectiondef .field-list ul li,
+.md-typeset .breathe-sectiondef .field-list ul li p {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+/* Bold the parameters heading */
+.breathe-sectiondef dl.field-list dt {
+  font-weight: bold;
+}
+
+/* shrink autosummary tables */
+.md-typeset .breathe-sectiondef table:not([class]) td {
+  padding: 0.4rem 0.6rem;
+}
