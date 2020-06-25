@@ -18,9 +18,11 @@ namespace sonata {
 // KeyType will be NodeID for somas report and pair<NodeID, uint32_t> for elements report
 template <typename KeyType>
 struct SONATA_API DataFrame {
-    using DataType = std::map<KeyType, std::vector<float>>;
-    std::vector<double> index;
-    DataType data;
+    using DataType = std::vector<KeyType>;
+    std::vector<double> times;
+    DataType ids;
+    // data[times][ids]
+    std::vector<std::vector<float>> data;
 };
 
 using Spike = std::pair<NodeID, double>;
@@ -48,9 +50,16 @@ class SONATA_API SpikeReader
             by_time = 2,
         };
 
+        /**
+         * Return reports for this population.
+         */
         Spikes get(const Selection& node_ids = Selection({}),
                    double tstart = -1,
                    double tstop = -1) const;
+
+        /**
+         * Return the way data are sorted ('none', 'by_id', 'by_time')
+         */
         Sorting getSorting() const;
 
       private:
@@ -69,6 +78,9 @@ class SONATA_API SpikeReader
 
     explicit SpikeReader(const std::string& filename);
 
+    /**
+     * Return a list of all population names.
+     */
     std::vector<std::string> getPopulationsNames() const;
 
     const Population& openPopulation(const std::string& populationName) const;
@@ -87,11 +99,31 @@ class SONATA_API ReportReader
     class Population
     {
       public:
+        /**
+         * Return (tstart, tstop, tstep) of the population
+         */
         std::tuple<double, double, double> getTimes() const;
+
+        /**
+         * Return the unit of time
+         */
         std::string getTimeUnits() const;
+
+        /**
+         * Return the unit of data.
+         */
         std::string getDataUnits() const;
+
+        /**
+         * Return true if the data is sorted.
+         */
         bool getSorted() const;
 
+        /**
+         * \param node_ids limit the report to the given selection.
+         * \param tstart return spikes occurring on or after tstart. tstart=-1 indicates no limit.
+         * \param tstop return spikes occurring on or before tstop. tstop=-1 indicates no limit.
+         */
         DataFrame<KeyType> get(const Selection& nodes_ids = Selection({}),
                                double _tstart = -1,
                                double _tstop = -1) const;
@@ -113,6 +145,9 @@ class SONATA_API ReportReader
 
     explicit ReportReader(const std::string& filename);
 
+    /**
+     * Return a list of all population names.
+     */
     std::vector<std::string> getPopulationsNames() const;
 
     const Population& openPopulation(const std::string& populationName) const;
