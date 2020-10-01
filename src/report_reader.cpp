@@ -316,6 +316,7 @@ template <typename T>
 DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>& selection,
                                               const nonstd::optional<double>& tstart,
                                               const nonstd::optional<double>& tstop) const {
+    std::cout << "Starting the get()" << std::endl;
     DataFrame<T> data_frame;
 
     size_t index_start = 0;
@@ -349,6 +350,11 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         node_ids = selection->flatten();
     }
 
+    std::cout << "Finding the gids and its positions" << std::endl;
+    std::vector<std::pair<uint64_t, uint64_t>> positions;
+    uint64_t min = UINT64_MAX;
+    uint64_t max = 0;
+    auto mapping_group = pop_group_.getGroup("mapping");
     for (const auto& node_id : node_ids) {
         const auto it = std::find_if(
             nodes_pointers_.begin(),
@@ -359,9 +365,15 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         if (it == nodes_pointers_.end()) {
             continue;
         }
+        if (it->second.first < min)
+            min = it->second.first;
+        if (it->second.second > max)
+            max = it->second.second;
+
+        positions.emplace_back(it->second.first, it->second.second);
 
         std::vector<ElementID> element_ids;
-        pop_group_.getGroup("mapping")
+        mapping_group
             .getDataSet("element_ids")
             .select({it->second.first}, {it->second.second - it->second.first})
             .read(element_ids);
@@ -378,39 +390,39 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     auto n_time_entries = index_stop - index_start + 1;
     auto n_ids = data_frame.ids.size();
     data_frame.data.resize(n_time_entries * n_ids);
+    std::cout << "Creating dataframe of " << n_time_entries << "x" << n_ids << std::endl;
+    std::cout << "Reading gids between " << index_start << " and " << index_stop << std::endl;
+    std::cout << "positions.size()" << positions.size() << std::endl;
+    std::cout << "Min: " << min << std::endl;
+    std::cout << "Max: " << max << std::endl;
+    auto dataset = pop_group_.getDataSet("data");
+    for(int timer_index=index_start; timer_index < index_stop+1; timer_index++) {
 
-    // FIXME: It will be good to do it for ranges but if node_ids are not sorted it is not easy
-    // TODO: specialized this function for sorted node_ids?
-    int ids_index = 0;
-    for (const auto& node_id : node_ids) {
-        const auto it = std::find_if(
-            nodes_pointers_.begin(),
-            nodes_pointers_.end(),
-            [&node_id](const std::pair<NodeID, std::pair<uint64_t, uint64_t>>& node_pointer) {
-                return node_pointer.first == node_id;
-            });
-        if (it == nodes_pointers_.end()) {
-            continue;
-        }
+        if(timer_index%10000 == 0)
+            std::cout << "Reading timestep " << timer_index << std::endl;
 
-        // elems are by timestamp and by Nodes_id
         std::vector<std::vector<float>> data;
-        pop_group_.getDataSet("data")
-            .select({index_start, it->second.first},
-                    {index_stop - index_start + 1, it->second.second - it->second.first})
-            .read(data);
+        dataset.select({timer_index, min}, {1, max-min}).read(data);
 
-        int timer_index = 0;
+        //std::cout << "Reading data ({" << timer_index << "," << min << "},{1, " << max-min <<"})"<< std::endl;
+        std::vector<float> selection(n_ids);
+        int offset = 0;
+        for (const auto& position : positions) {
+            int elements_per_gid = position.second - position.first;
+            uint64_t gid_start = position.first - min;
+            uint64_t gid_end = position.second - min;
 
-        for (const std::vector<float>& datum : data) {
-            std::copy(datum.data(),
-                      datum.data() + datum.size(),
-                      &data_frame.data[timer_index * n_ids + ids_index]);
-            ++timer_index;
+            std::copy(&data[0][gid_start], &data[0][gid_end], &selection[offset]);
+            offset += elements_per_gid;
         }
-        ids_index += data[0].size();
-    }
+        int data_offset = timer_index - index_start;
+        std::copy(selection.data(), selection.data() + n_ids, &data_frame.data[data_offset * n_ids]);
 
+        if(timer_index==0) {
+            std::cout << "Filas" << data.size() << std::endl;
+            std::cout << "Columnas" << data[0].size() << std::endl;
+        }
+    }
     return data_frame;
 }
 
