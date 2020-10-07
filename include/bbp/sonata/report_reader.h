@@ -135,8 +135,7 @@ class SONATA_API ReportReader
         Population(const H5::File& file, const std::string& populationName);
         std::pair<size_t, size_t> getIndex(const nonstd::optional<double>& tstart, const nonstd::optional<double>& tstop) const;
 
-        std::vector<std::pair<NodeID, std::pair<uint64_t, uint64_t>>> nodes_pointers_;
-        std::map<NodeID, std::pair<uint64_t, uint64_t>> nodes_pointers_map;
+        std::map<NodeID, std::pair<uint64_t, uint64_t>> nodes_pointers_;
         H5::Group pop_group_;
         std::vector<NodeID> nodes_ids_;
         double tstart_, tstop_, tstep_;

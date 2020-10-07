@@ -225,10 +225,7 @@ ReportReader<T>::Population::Population(const H5::File& file, const std::string&
         mapping_group.getDataSet("index_pointers").read(index_pointers);
 
         for (size_t i = 0; i < nodes_ids_.size(); ++i) {
-            nodes_pointers_.emplace_back(nodes_ids_[i],
-                                         std::make_pair(index_pointers[i], index_pointers[i + 1]));
-            
-            nodes_pointers_map[nodes_ids_[i]] = std::make_pair(index_pointers[i], index_pointers[i + 1]);
+            nodes_pointers_.emplace(nodes_ids_[i], std::make_pair(index_pointers[i], index_pointers[i + 1]));
         }
 
         {  // Get times
@@ -358,13 +355,8 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     uint64_t max = 0;
     auto dataset_elem_ids = pop_group_.getGroup("mapping").getDataSet("element_ids");
     for (const auto& node_id : node_ids) {
-        const auto it = nodes_pointers_map.find(node_id); /*std::find_if(
-            nodes_pointers_.begin(),
-            nodes_pointers_.end(),
-            [&node_id](const std::pair<NodeID, std::pair<NodeID, uint64_t>>& node_pointer) {
-                return node_pointer.first == node_id;
-            });*/
-        if (it == nodes_pointers_map.end()) {
+        const auto it = nodes_pointers_.find(node_id);
+        if (it == nodes_pointers_.end()) {
             continue;
         }
 
