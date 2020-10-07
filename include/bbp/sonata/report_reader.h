@@ -132,7 +132,7 @@ class SONATA_API ReportReader
                                const nonstd::optional<double>& tstop = nonstd::nullopt) const;
 
       private:
-        Population(const H5::File& file, const std::string& populationName);
+        Population(const H5::File& file, hid_t m_file_, const std::string& populationName);
         std::pair<size_t, size_t> getIndex(const nonstd::optional<double>& tstart, const nonstd::optional<double>& tstop) const;
 
         std::vector<std::pair<NodeID, std::pair<uint64_t, uint64_t>>> nodes_pointers_;
@@ -143,6 +143,7 @@ class SONATA_API ReportReader
         std::string time_units_;
         std::string data_units_;
         bool nodes_ids_sorted_ = false;
+        hid_t m_file;
 
         friend ReportReader;
     };
@@ -158,7 +159,7 @@ class SONATA_API ReportReader
 
   private:
     H5::File file_;
-
+    hid_t m_file;
     // Lazy loaded population
     mutable std::map<std::string, Population> populations_;
 };

@@ -196,9 +196,13 @@ void SpikeReader::Population::filterTimestamp(Spikes& spikes, double tstart, dou
     }
 }
 
+
+
 template <typename T>
 ReportReader<T>::ReportReader(const std::string& filename)
-    : file_(filename, H5::File::ReadOnly) {}
+    : file_(filename, H5::File::ReadOnly) {
+        m_file = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+        }
 
 template <typename T>
 std::vector<std::string> ReportReader<T>::getPopulationNames() const {
@@ -208,15 +212,16 @@ std::vector<std::string> ReportReader<T>::getPopulationNames() const {
 template <typename T>
 auto ReportReader<T>::openPopulation(const std::string& populationName) const -> const Population& {
     if (populations_.find(populationName) == populations_.end()) {
-        populations_.emplace(populationName, Population{file_, populationName});
+        populations_.emplace(populationName, Population{file_, m_file, populationName});
     }
 
     return populations_.at(populationName);
 }
 
 template <typename T>
-ReportReader<T>::Population::Population(const H5::File& file, const std::string& populationName)
-    : pop_group_(file.getGroup(std::string("/report/") + populationName)) {
+ReportReader<T>::Population::Population(const H5::File& file, hid_t m_file_, const std::string& populationName)
+    : pop_group_(file.getGroup(std::string("/report/") + populationName))
+    , m_file(m_file_) {
     {
         const auto mapping_group = pop_group_.getGroup("mapping");
         mapping_group.getDataSet("node_ids").read(nodes_ids_);
@@ -316,7 +321,7 @@ template <typename T>
 DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>& selection,
                                               const nonstd::optional<double>& tstart,
                                               const nonstd::optional<double>& tstop) const {
-    std::cout << "Starting the get()" << std::endl;
+    //std::cout << "Starting the get()" << std::endl;
     DataFrame<T> data_frame;
 
     size_t index_start = 0;
@@ -365,6 +370,9 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         if (it == nodes_pointers_.end()) {
             continue;
         }
+
+        //std::cout << node_id << " " << it->first << " " << it->second.first << " " << it->second.second <<  std::endl;
+
         if (it->second.first < min)
             min = it->second.first;
         if (it->second.second > max)
@@ -390,37 +398,48 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     auto n_time_entries = index_stop - index_start + 1;
     auto n_ids = data_frame.ids.size();
     data_frame.data.resize(n_time_entries * n_ids);
-    std::cout << "Creating dataframe of " << n_time_entries << "x" << n_ids << std::endl;
-    std::cout << "Reading gids between " << index_start << " and " << index_stop << std::endl;
-    std::cout << "positions.size()" << positions.size() << std::endl;
-    std::cout << "Min: " << min << std::endl;
-    std::cout << "Max: " << max << std::endl;
+    //std::cout << "Creating dataframe of " << n_time_entries << "x" << n_ids << std::endl;
+    //std::cout << "Reading gids between " << index_start << " and " << index_stop << std::endl;
+    std::cout << "positions.size() " << positions.size() << std::endl;
+    std::cout << "Min " << min << " / Max " << max << std::endl;
     auto dataset = pop_group_.getDataSet("data");
+    
+    auto gid = H5Gopen2(m_file, "/report/All", H5P_DEFAULT);
+    auto did = H5Dopen2(gid, "data", H5P_DEFAULT);
+    hsize_t hs_offset[] = {0, (hsize_t)min};
+    hsize_t hs_count[] = {(hsize_t)1, (hsize_t)(max-min)};
+    auto mid = H5Screate_simple(2, hs_count, nullptr);
+    auto sid = H5Dget_space(did);
+
+    std::vector<float> data;
+    data.resize(max-min);
     for(int timer_index=index_start; timer_index < index_stop+1; timer_index++) {
 
-        if(timer_index%10000 == 0)
+        if((timer_index+1)%10000 == 0)
             std::cout << "Reading timestep " << timer_index << std::endl;
+        hs_offset[0] = (hsize_t)timer_index;
+        H5Sselect_hyperslab(sid, H5S_SELECT_SET, hs_offset, NULL, hs_count, NULL);
+        //dataset.select({timer_index, min}, {1, max-min}).read(data);
 
-        std::vector<std::vector<float>> data;
-        dataset.select({timer_index, min}, {1, max-min}).read(data);
-
+        H5Dread(did, H5T_NATIVE_FLOAT, mid, sid, H5P_DEFAULT, data.data());
+        
         //std::cout << "Reading data ({" << timer_index << "," << min << "},{1, " << max-min <<"})"<< std::endl;
         std::vector<float> selection(n_ids);
         int offset = 0;
+        auto data_ptr = &data[0];
         for (const auto& position : positions) {
             int elements_per_gid = position.second - position.first;
             uint64_t gid_start = position.first - min;
             uint64_t gid_end = position.second - min;
 
-            std::copy(&data[0][gid_start], &data[0][gid_end], &selection[offset]);
+            std::copy(&data_ptr[gid_start], &data_ptr[gid_end], &selection[offset]);
             offset += elements_per_gid;
         }
         int data_offset = timer_index - index_start;
         std::copy(selection.data(), selection.data() + n_ids, &data_frame.data[data_offset * n_ids]);
 
         if(timer_index==0) {
-            std::cout << "Filas" << data.size() << std::endl;
-            std::cout << "Columnas" << data[0].size() << std::endl;
+            std::cout << "Filas " << data.size() << " / Columnas " << data.size() << std::endl;
         }
     }
     return data_frame;
