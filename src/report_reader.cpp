@@ -227,6 +227,8 @@ ReportReader<T>::Population::Population(const H5::File& file, const std::string&
         for (size_t i = 0; i < nodes_ids_.size(); ++i) {
             nodes_pointers_.emplace_back(nodes_ids_[i],
                                          std::make_pair(index_pointers[i], index_pointers[i + 1]));
+            
+            nodes_pointers_map[nodes_ids_[i]] = std::make_pair(index_pointers[i], index_pointers[i + 1]);
         }
 
         {  // Get times
@@ -315,7 +317,7 @@ std::pair<size_t, size_t> ReportReader<T>::Population::getIndex(
 template <typename T>
 DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>& selection,
                                               const nonstd::optional<double>& tstart,
-                                              const nonstd::optional<double>& tstop) const {
+                                              const nonstd::optional<double>& tstop) const { // <<<< TODO: Add tstep
     //std::cout << "Starting the get()" << std::endl;
     DataFrame<T> data_frame;
 
@@ -327,7 +329,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         throw SonataError("tstart should be <= to tstop");
     }
 
-    for (size_t i = index_start; i <= index_stop; ++i) {
+    for (size_t i = index_start; i <= index_stop; ++i) { // <<<<<< TODO: tstep!!
         data_frame.times.push_back(times_index_[i].second);
     }
 
@@ -354,15 +356,15 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     std::vector<std::pair<uint64_t, uint64_t>> positions;
     uint64_t min = UINT64_MAX;
     uint64_t max = 0;
-    auto mapping_group = pop_group_.getGroup("mapping");
+    auto dataset_elem_ids = pop_group_.getGroup("mapping").getDataSet("element_ids")
     for (const auto& node_id : node_ids) {
-        const auto it = std::find_if(
+        const auto it = nodes_pointers_map.find(node_id); /*std::find_if(
             nodes_pointers_.begin(),
             nodes_pointers_.end(),
             [&node_id](const std::pair<NodeID, std::pair<NodeID, uint64_t>>& node_pointer) {
                 return node_pointer.first == node_id;
-            });
-        if (it == nodes_pointers_.end()) {
+            });*/
+        if (it == nodes_pointers_map.end()) {
             continue;
         }
 
@@ -376,9 +378,8 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         positions.emplace_back(it->second.first, it->second.second);
 
         std::vector<ElementID> element_ids;
-        mapping_group
-            .getDataSet("element_ids")
-            .select({it->second.first}, {it->second.second - it->second.first})
+        
+        dataset_elem_ids.select({it->second.first}, {it->second.second - it->second.first})
             .read(element_ids);
         for (const auto& elem : element_ids) {
             data_frame.ids.push_back(make_key<T>(node_id, elem));
@@ -400,7 +401,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     
     std::vector<float> buffer(max-min);
     auto dataset = pop_group_.getDataSet("data");
-    for(int timer_index=index_start; timer_index < index_stop+1; timer_index++) {
+    for(int timer_index=index_start; timer_index < index_stop+1; timer_index++) { // TODO: tstep + change to size_t!!
 
         if(timer_index%10000 == 0)
             std::cout << "Reading timestep " << timer_index << std::endl;
