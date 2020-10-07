@@ -398,14 +398,14 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     std::cout << "positions.size() " << positions.size() << std::endl;
     std::cout << "Min " << min << " / Max " << max << std::endl;
     
-    std::vector<std::vector<float>> data;
+    std::vector<float> buffer(max-min);
     auto dataset = pop_group_.getDataSet("data");
     for(int timer_index=index_start; timer_index < index_stop+1; timer_index++) {
 
         if(timer_index%10000 == 0)
             std::cout << "Reading timestep " << timer_index << std::endl;
 
-        dataset.select({timer_index, min}, {1, max-min}).read(data);
+        dataset.select({timer_index, min}, {1, max-min}).read(buffer.data());
 
         //std::cout << "Reading data ({" << timer_index << "," << min << "},{1, " << max-min <<"})"<< std::endl;
         std::vector<float> selection(n_ids);
@@ -415,14 +415,14 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
             uint64_t gid_start = position.first - min;
             uint64_t gid_end = position.second - min;
 
-            std::copy(&data[0][gid_start], &data[0][gid_end], &selection[offset]);
+            std::copy(&buffer[gid_start], &buffer[gid_end], &selection[offset]);
             offset += elements_per_gid;
         }
         int data_offset = timer_index - index_start;
         std::copy(selection.data(), selection.data() + n_ids, &data_frame.data[data_offset * n_ids]);
 
         if(timer_index==0) {
-            std::cout << "Filas " << data.size() << " / Columnas " << data.size() << std::endl;
+            std::cout << "Filas 1 / Columnas " << buffer.size() << std::endl;
         }
     }
     return data_frame;
