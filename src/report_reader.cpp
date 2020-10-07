@@ -377,10 +377,9 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
 
         positions.emplace_back(it->second.first, it->second.second);
 
-        std::vector<ElementID> element_ids;
-        
+        std::vector<ElementID> element_ids(it->second.second - it->second.first);
         dataset_elem_ids.select({it->second.first}, {it->second.second - it->second.first})
-            .read(element_ids);
+            .read(element_ids.data());
         for (const auto& elem : element_ids) {
             data_frame.ids.push_back(make_key<T>(node_id, elem));
         }
