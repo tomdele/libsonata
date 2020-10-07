@@ -356,7 +356,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     std::vector<std::pair<uint64_t, uint64_t>> positions;
     uint64_t min = UINT64_MAX;
     uint64_t max = 0;
-    auto dataset_elem_ids = pop_group_.getGroup("mapping").getDataSet("element_ids")
+    auto dataset_elem_ids = pop_group_.getGroup("mapping").getDataSet("element_ids");
     for (const auto& node_id : node_ids) {
         const auto it = nodes_pointers_map.find(node_id); /*std::find_if(
             nodes_pointers_.begin(),
@@ -408,19 +408,17 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
 
         dataset.select({timer_index, min}, {1, max-min}).read(buffer.data());
 
-        //std::cout << "Reading data ({" << timer_index << "," << min << "},{1, " << max-min <<"})"<< std::endl;
-        std::vector<float> selection(n_ids);
-        int offset = 0;
+        off_t offset = 0;
+        off_t data_offset = timer_index - index_start;
+        auto data_ptr = &data_frame.data[data_offset * n_ids];
         for (const auto& position : positions) {
             int elements_per_gid = position.second - position.first;
             uint64_t gid_start = position.first - min;
             uint64_t gid_end = position.second - min;
 
-            std::copy(&buffer[gid_start], &buffer[gid_end], &selection[offset]);
+            std::copy(&buffer[gid_start], &buffer[gid_end], &data_ptr[offset]);
             offset += elements_per_gid;
         }
-        int data_offset = timer_index - index_start;
-        std::copy(selection.data(), selection.data() + n_ids, &data_frame.data[data_offset * n_ids]);
 
         if(timer_index==0) {
             std::cout << "Filas 1 / Columnas " << buffer.size() << std::endl;
