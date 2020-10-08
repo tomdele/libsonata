@@ -8,8 +8,8 @@
 
 #include <highfive/H5File.hpp>
 
-#include <bbp/sonata/population.h>
 #include <bbp/sonata/optional.hpp>
+#include <bbp/sonata/population.h>
 
 namespace H5 = HighFive;
 
@@ -136,7 +136,8 @@ class SONATA_API ReportReader
 
       private:
         Population(const H5::File& file, const std::string& populationName);
-        std::pair<size_t, size_t> getIndex(const nonstd::optional<double>& tstart, const nonstd::optional<double>& tstop) const;
+        std::pair<size_t, size_t> getIndex(const nonstd::optional<double>& tstart,
+                                           const nonstd::optional<double>& tstop) const;
 
         std::map<NodeID, std::pair<uint64_t, uint64_t>> nodes_pointers_;
         H5::Group pop_group_;

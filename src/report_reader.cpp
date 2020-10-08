@@ -225,7 +225,8 @@ ReportReader<T>::Population::Population(const H5::File& file, const std::string&
         mapping_group.getDataSet("index_pointers").read(index_pointers);
 
         for (size_t i = 0; i < nodes_ids_.size(); ++i) {
-            nodes_pointers_.emplace(nodes_ids_[i], std::make_pair(index_pointers[i], index_pointers[i + 1]));
+            nodes_pointers_.emplace(nodes_ids_[i],
+                                    std::make_pair(index_pointers[i], index_pointers[i + 1]));
         }
 
         {  // Get times
@@ -316,9 +317,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
                                               const nonstd::optional<double>& tstart,
                                               const nonstd::optional<double>& tstop,
                                               const nonstd::optional<size_t>& tstride) const {
-    //std::cout << "Starting the get()" << std::endl;
     DataFrame<T> data_frame;
-
     size_t index_start = 0;
     size_t index_stop = 0;
     std::tie(index_start, index_stop) = getIndex(tstart, tstop);
@@ -351,7 +350,6 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         node_ids = selection->flatten();
     }
 
-    std::cout << "Finding the gids and its positions" << std::endl;
     std::vector<std::pair<uint64_t, uint64_t>> positions;
     uint64_t min = UINT64_MAX;
     uint64_t max = 0;
@@ -361,16 +359,13 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         if (it == nodes_pointers_.end()) {
             continue;
         }
-
-        //std::cout << node_id << " " << it->first << " " << it->second.first << " " << it->second.second <<  std::endl;
-
-        if (it->second.first < min)
+        if (it->second.first < min) {
             min = it->second.first;
-        if (it->second.second > max)
+        }
+        if (it->second.second > max) {
             max = it->second.second;
-
+        }
         positions.emplace_back(it->second.first, it->second.second);
-
         std::vector<ElementID> element_ids(it->second.second - it->second.first);
         dataset_elem_ids.select({it->second.first}, {it->second.second - it->second.first})
             .read(element_ids.data());
@@ -383,23 +378,14 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     }
 
     // Fill .data member
-
     size_t n_time_entries = ((index_stop - index_start) / stride) + 1;
     auto n_ids = data_frame.ids.size();
     data_frame.data.resize(n_time_entries * n_ids);
-    //std::cout << "Creating dataframe of " << n_time_entries << "x" << n_ids << std::endl;
-    std::cout << "Reading gids between " << index_start << " and " << index_stop << std::endl;
-    std::cout << "positions.size() " << positions.size() << std::endl;
-    std::cout << "Min " << min << " / Max " << max << std::endl;
-    
-    std::vector<float> buffer(max-min);
+
+    std::vector<float> buffer(max - min);
     auto dataset = pop_group_.getDataSet("data");
-    for(size_t timer_index=index_start; timer_index <= index_stop; timer_index += stride) {
-
-        if(timer_index%10000 == 0)
-            std::cout << "Reading timestep " << timer_index << std::endl;
-
-        dataset.select({timer_index, min}, {1, max-min}).read(buffer.data());
+    for (size_t timer_index = index_start; timer_index <= index_stop; timer_index += stride) {
+        dataset.select({timer_index, min}, {1, max - min}).read(buffer.data());
 
         off_t offset = 0;
         off_t data_offset = (timer_index - index_start) / stride;
@@ -411,10 +397,6 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
 
             std::copy(&buffer[gid_start], &buffer[gid_end], &data_ptr[offset]);
             offset += elements_per_gid;
-        }
-
-        if(timer_index==0) {
-            std::cout << "Filas 1 / Columnas " << buffer.size() << std::endl;
         }
     }
     return data_frame;
