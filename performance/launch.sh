@@ -15,7 +15,7 @@ function run_test {
     echo "$1; $2; $3; $4; $elapsed; $INPUT_FILE"
 }
 
-for nsamples in 10 100 1000 10000 100000
+for nsamples in 1 10 100 1000 10000 100000
 do
    run_test 50001  150000  $nsamples 1
    run_test 250001 750000  $nsamples 1
