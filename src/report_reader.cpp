@@ -314,19 +314,21 @@ std::pair<size_t, size_t> ReportReader<T>::Population::getIndex(
 template <typename T>
 DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>& selection,
                                               const nonstd::optional<double>& tstart,
-                                              const nonstd::optional<double>& tstop) const { // <<<< TODO: Add tstep
+                                              const nonstd::optional<double>& tstop,
+                                              const nonstd::optional<size_t>& tstride) const {
     //std::cout << "Starting the get()" << std::endl;
     DataFrame<T> data_frame;
 
     size_t index_start = 0;
     size_t index_stop = 0;
     std::tie(index_start, index_stop) = getIndex(tstart, tstop);
+    const size_t stride = tstride.value_or(1);
 
     if (index_start > index_stop) {
         throw SonataError("tstart should be <= to tstop");
     }
 
-    for (size_t i = index_start; i <= index_stop; ++i) { // <<<<<< TODO: tstep!!
+    for (size_t i = index_start; i <= index_stop; i += stride) {
         data_frame.times.push_back(times_index_[i].second);
     }
 
@@ -382,17 +384,17 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
 
     // Fill .data member
 
-    auto n_time_entries = index_stop - index_start + 1;
+    size_t n_time_entries = ((index_stop - index_start) / stride) + 1;
     auto n_ids = data_frame.ids.size();
     data_frame.data.resize(n_time_entries * n_ids);
     //std::cout << "Creating dataframe of " << n_time_entries << "x" << n_ids << std::endl;
-    //std::cout << "Reading gids between " << index_start << " and " << index_stop << std::endl;
+    std::cout << "Reading gids between " << index_start << " and " << index_stop << std::endl;
     std::cout << "positions.size() " << positions.size() << std::endl;
     std::cout << "Min " << min << " / Max " << max << std::endl;
     
     std::vector<float> buffer(max-min);
     auto dataset = pop_group_.getDataSet("data");
-    for(int timer_index=index_start; timer_index < index_stop+1; timer_index++) { // TODO: tstep + change to size_t!!
+    for(size_t timer_index=index_start; timer_index <= index_stop; timer_index += stride) {
 
         if(timer_index%10000 == 0)
             std::cout << "Reading timestep " << timer_index << std::endl;
@@ -400,7 +402,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         dataset.select({timer_index, min}, {1, max-min}).read(buffer.data());
 
         off_t offset = 0;
-        off_t data_offset = timer_index - index_start;
+        off_t data_offset = (timer_index - index_start) / stride;
         auto data_ptr = &data_frame.data[data_offset * n_ids];
         for (const auto& position : positions) {
             int elements_per_gid = position.second - position.first;
