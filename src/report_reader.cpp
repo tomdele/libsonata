@@ -349,7 +349,8 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         node_ids = selection->flatten();
     }
 
-    std::vector<std::pair<uint64_t, uint64_t>> positions;
+    // std::vector<std::pair<uint64_t, uint64_t>> positions;
+    std::map<uint64_t, uint64_t> positions;
     uint64_t min = UINT64_MAX;
     uint64_t max = 0;
     auto dataset_elem_ids = pop_group_.getGroup("mapping").getDataSet("element_ids");
@@ -364,7 +365,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         if (it->second.second > max) {
             max = it->second.second;
         }
-        positions.emplace_back(it->second.first, it->second.second);
+        positions.emplace(it->second.first, it->second.second);
         std::vector<ElementID> element_ids(it->second.second - it->second.first);
         dataset_elem_ids.select({it->second.first}, {it->second.second - it->second.first})
             .read(element_ids.data());
@@ -390,7 +391,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         off_t data_offset = (timer_index - index_start) / stride;
         auto data_ptr = &data_frame.data[data_offset * n_ids];
         for (const auto& position : positions) {
-            int elements_per_gid = position.second - position.first;
+            uint64_t elements_per_gid = position.second - position.first;
             uint64_t gid_start = position.first - min;
             uint64_t gid_end = position.second - min;
 
