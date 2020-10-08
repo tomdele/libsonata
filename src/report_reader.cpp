@@ -321,8 +321,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     size_t index_start = 0;
     size_t index_stop = 0;
     std::tie(index_start, index_stop) = getIndex(tstart, tstop);
-    const size_t stride = tstride.value_or(1);
-
+    const size_t stride = tstride.value_or(1) > 0 ? tstride.value_or(1) : 1;
     if (index_start > index_stop) {
         throw SonataError("tstart should be <= to tstop");
     }
