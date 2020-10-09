@@ -398,9 +398,9 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
             if (elements_per_gid == 1) {
                 data_ptr[offset] = buffer[gid_start];
             } else {  // Elements report
-                memcpy(&data_ptr[offset],
-                       &buffer[gid_start],
-                       sizeof(float) * (gid_end - gid_start));
+                std::memcpy(&data_ptr[offset],
+                            &buffer[gid_start],
+                            sizeof(float) * (gid_end - gid_start));
             }
             offset += elements_per_gid;
         }
