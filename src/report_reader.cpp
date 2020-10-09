@@ -378,7 +378,7 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
 
     // Fill .data member
     size_t n_time_entries = ((index_stop - index_start) / stride) + 1;
-    auto n_ids = data_frame.ids.size();
+    size_t n_ids = data_frame.ids.size();
     data_frame.data.resize(n_time_entries * n_ids);
 
     std::vector<float> buffer(max - min);
