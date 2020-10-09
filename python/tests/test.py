@@ -282,6 +282,7 @@ class TestSomaReportPopulation(unittest.TestCase):
         sel = self.test_obj['All'].get(node_ids=[13, 14], tstart=0.8, tstop=1.0)
         self.assertEqual(len(sel.times), 2)  # Number of timestamp (0.8 and 0.9)
         self.assertEqual(list(sel.ids), [13, 14])
+        np.testing.assert_allclose(sel.data, [[13.8, 14.8], [13.9, 14.9]])
 
 class TestElementReportPopulation(unittest.TestCase):
     def setUp(self):

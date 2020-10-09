@@ -394,7 +394,14 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
             uint64_t gid_start = position.first - min;
             uint64_t gid_end = position.second - min;
 
-            memcpy(&data_ptr[offset], &buffer[gid_start], sizeof(float) * (gid_end - gid_start));
+            // Soma report
+            if (elements_per_gid == 1) {
+                data_ptr[offset] = buffer[gid_start];
+            } else {  // Elements report
+                memcpy(&data_ptr[offset],
+                       &buffer[gid_start],
+                       sizeof(float) * (gid_end - gid_start));
+            }
             offset += elements_per_gid;
         }
     }
