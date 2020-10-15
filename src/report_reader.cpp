@@ -358,13 +358,10 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
         if (it == nodes_pointers_.end()) {
             continue;
         }
-        if (it->second.first < min) {
-            min = it->second.first;
-        }
-        if (it->second.second > max) {
-            max = it->second.second;
-        }
+        min = std::min(it->second.first, min);
+        max = std::max(it->second.second, max);
         positions.emplace_back(it->second.first, it->second.second);
+
         std::vector<ElementID> element_ids(it->second.second - it->second.first);
         dataset_elem_ids.select({it->second.first}, {it->second.second - it->second.first})
             .read(element_ids.data());
@@ -381,30 +378,37 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     size_t n_ids = data_frame.ids.size();
     data_frame.data.resize(n_time_entries * n_ids);
 
-    std::vector<float> buffer(max - min);
-    auto dataset = pop_group_.getDataSet("data");
-    for (size_t timer_index = index_start; timer_index <= index_stop; timer_index += stride) {
-        dataset.select({timer_index, min}, {1, max - min}).read(buffer.data());
+    #pragma omp parallel
+    {
+        std::vector<float> buffer(max - min);
+        auto dataset = pop_group_.getDataSet("data");
 
-        off_t offset = 0;
-        off_t data_offset = (timer_index - index_start) / stride;
-        auto data_ptr = &data_frame.data[data_offset * n_ids];
-        for (const auto& position : positions) {
-            uint64_t elements_per_gid = position.second - position.first;
-            uint64_t gid_start = position.first - min;
-            uint64_t gid_end = position.second - min;
+        #pragma omp for
+        for (size_t timer_index = index_start; timer_index <= index_stop; timer_index += stride) {
+            dataset.select({timer_index, min}, {1, max - min}).read(buffer.data());
 
-            // Soma report
-            if (elements_per_gid == 1) {
-                data_ptr[offset] = buffer[gid_start];
-            } else {  // Elements report
-                std::memcpy(&data_ptr[offset],
-                            &buffer[gid_start],
-                            sizeof(float) * (gid_end - gid_start));
+            off_t offset = 0;
+            off_t data_offset = (timer_index - index_start) / stride;
+            auto data_ptr = &data_frame.data[data_offset * n_ids];
+
+            for (const auto& position : positions) {
+                uint64_t elements_per_gid = position.second - position.first;
+                uint64_t gid_start = position.first - min;
+                uint64_t gid_end = position.second - min;
+
+                // Soma report
+                if (elements_per_gid == 1) {
+                    data_ptr[offset] = buffer[gid_start];
+                } else {  // Elements report
+                    std::memcpy(&data_ptr[offset],
+                                &buffer[gid_start],
+                                sizeof(float) * (gid_end - gid_start));
+                }
+                offset += elements_per_gid;
             }
-            offset += elements_per_gid;
         }
     }
+
     return data_frame;
 }
 
