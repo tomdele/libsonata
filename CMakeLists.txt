@@ -96,6 +96,8 @@ configure_file (
 add_library(sonata_shared SHARED ${SONATA_SRC})
 add_library(sonata_static STATIC ${SONATA_SRC})
 
+find_package(OpenMP)
+
 foreach(TARGET sonata_shared sonata_static)
     set_target_properties(${TARGET}
         PROPERTIES
@@ -111,6 +113,9 @@ foreach(TARGET sonata_shared sonata_static)
     target_compile_options(${TARGET}
         PRIVATE ${SONATA_COMPILE_OPTIONS}
     )
+
+    target_link_libraries(${TARGET} PUBLIC OpenMP::OpenMP_CXX)
+
     if (ENABLE_COVERAGE)
         target_compile_options(${TARGET}
             PRIVATE -g -O0 --coverage -fprofile-arcs -ftest-coverage

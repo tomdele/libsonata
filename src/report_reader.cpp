@@ -378,37 +378,23 @@ DataFrame<T> ReportReader<T>::Population::get(const nonstd::optional<Selection>&
     size_t n_ids = data_frame.ids.size();
     data_frame.data.resize(n_time_entries * n_ids);
 
-    #pragma omp parallel
-    {
-        std::vector<float> buffer(max - min);
-        auto dataset = pop_group_.getDataSet("data");
+    std::vector<float> buffer(max - min);
+    auto dataset = pop_group_.getDataSet("data");
+    for (size_t timer_index = index_start; timer_index <= index_stop; timer_index += stride) {
+        dataset.select({timer_index, min}, {1, max - min}).read(buffer.data());
 
-        #pragma omp for
-        for (size_t timer_index = index_start; timer_index <= index_stop; timer_index += stride) {
-            dataset.select({timer_index, min}, {1, max - min}).read(buffer.data());
+        off_t data_offset = (timer_index - index_start) / stride;
+        auto data_ptr = &data_frame.data[data_offset * n_ids];
+        auto position_ptr = positions.data();
+        size_t positions_size = positions.size();
 
-            off_t offset = 0;
-            off_t data_offset = (timer_index - index_start) / stride;
-            auto data_ptr = &data_frame.data[data_offset * n_ids];
+        #pragma omp parallel for
+        for (off_t offset = 0; offset < positions_size; offset++) {
+            uint64_t gid_start = positions[offset].first - min;
 
-            for (const auto& position : positions) {
-                uint64_t elements_per_gid = position.second - position.first;
-                uint64_t gid_start = position.first - min;
-                uint64_t gid_end = position.second - min;
-
-                // Soma report
-                if (elements_per_gid == 1) {
-                    data_ptr[offset] = buffer[gid_start];
-                } else {  // Elements report
-                    std::memcpy(&data_ptr[offset],
-                                &buffer[gid_start],
-                                sizeof(float) * (gid_end - gid_start));
-                }
-                offset += elements_per_gid;
-            }
+            data_ptr[offset] = buffer[gid_start];
         }
     }
-
     return data_frame;
 }
 
