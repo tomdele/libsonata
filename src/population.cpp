@@ -89,6 +89,7 @@ Selection union_(const Ranges& lhs, const Ranges& rhs) {
     ret = detail::_sortAndMerge(ret);
     return Selection(std::move(ret));
 }
+
 }  // namespace detail
 
 
@@ -290,6 +291,88 @@ std::vector<T> Population::getAttribute(const std::string& name,
     return getAttribute<T>(name, selection);
 }
 
+namespace {
+
+template <typename T>
+Selection selectMatches(const std::vector<T>& values, const std::vector<T>& wanted) {
+    Selection::Ranges ranges;
+    bool inRange = false;
+    size_t start = 0;
+    size_t end = 0;
+
+    size_t i = 0;
+    for (const auto& v : values) {
+        if (std::find(wanted.cbegin(), wanted.cend(), v) != wanted.cend()) {
+            if (!inRange) {
+                start = end = i;
+                inRange = true;
+            }
+            ++end;
+        } else if (inRange) {
+            inRange = false;
+            ranges.push_back({start, end});
+        }
+
+        ++i;
+    }
+
+    if (inRange) {
+        ranges.push_back({start, end});
+    }
+
+    return Selection(detail::_sortAndMerge(ranges));
+}
+
+}  // namespace
+
+template <typename T>
+Selection Population::selectAttributeByValue(const std::string& name,
+                                             const std::vector<T>& wanted) const {
+    const std::vector<T> values = getAttribute<T>(name, selectAll());
+    return selectMatches(values, {wanted});
+}
+template Selection Population::selectAttributeByValue<std::int64_t>(
+    const std::string& name, const std::vector<std::int64_t>& wanted) const;
+
+template Selection Population::selectAttributeByValue<std::uint64_t>(
+    const std::string& name, const std::vector<std::uint64_t>& wanted) const;
+
+#ifdef __APPLE__
+template Selection Population::selectAttributeByValue<std::size_t>(const std::string& name,
+                                                                   const std::size_t& wanted) const;
+#endif
+
+
+template <>
+Selection Population::selectAttributeByValue<std::string>(
+    const std::string& name, const std::vector<std::string>& wanted) const {
+    auto all = selectAll();
+
+    if (impl_->attributeEnumNames.count(name) == 0) {
+        HDF5_LOCK_GUARD
+        std::vector<std::string> values =
+            _readSelection<std::string>(impl_->getAttributeDataSet(name), all);
+
+        return selectMatches(values, wanted);
+    }
+
+    const auto enum_values = enumerationValues(name);
+    std::vector<uint64_t> wanted_enum_value;
+    wanted_enum_value.reserve(wanted.size());
+    for (const auto& w : wanted) {
+        const auto wanted_index = std::find(enum_values.cbegin(), enum_values.cend(), w);
+        if (wanted_index != enum_values.cend()) {
+            wanted_enum_value.push_back(wanted_index - enum_values.cbegin());
+        }
+    }
+
+    if (wanted_enum_value.empty()) {
+        return Selection({});
+    }
+
+    const auto indices = getAttribute<uint64_t>(name, all);
+    return selectMatches<uint64_t>(indices, wanted_enum_value);
+}
 
 template <typename T>
 std::vector<T> Population::getEnumeration(const std::string& name,

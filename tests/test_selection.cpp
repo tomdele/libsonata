@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include <bbp/sonata/edges.h>
 #include <bbp/sonata/population.h>
 
 
@@ -122,4 +123,58 @@ TEST_CASE("Selection", "[base]") {
         }
     }
     */
+}
+
+TEST_CASE("SelectPredicates", "[base]") {
+    const EdgePopulation population("./data/edges1.h5", "", "edges-AB");
+
+    SECTION("INT_VALUES") {
+        auto sel = population.selectAttributeByValue<std::uint64_t>("attr-Y", {21});
+        CHECK(Selection({{0, 1}}) == sel);
+
+        auto selEmpty = population.selectAttributeByValue<std::int64_t>("attr-Y", {123});
+        CHECK(Selection({}) == selEmpty);
+    }
+
+    SECTION("STRING_VALUES") {
+        auto sel = population.selectAttributeByValue<std::string>("attr-Z", {"ee"});
+        CHECK(Selection({{4, 5}}) == sel);
+
+        auto selEmpty = population.selectAttributeByValue<std::string>("attr-Z", {"missing"});
+        CHECK(Selection({}) == selEmpty);
+    }
+
+    SECTION("STRING_ENUM") {
+        // "A", "B", "C" -> 2, 1, 2, 0, 2, 2
+        auto selA = population.selectAttributeByValue<std::string>("E-mapping-good", {"A"});
+        CHECK(Selection({{3, 4}}) == selA);
+
+        auto selB = population.selectAttributeByValue<std::string>("E-mapping-good", {"B"});
+        CHECK(Selection({{1, 2}}) == selB);
+
+        auto selC = population.selectAttributeByValue<std::string>("E-mapping-good", {"C"});
+        CHECK(Selection({{0, 1}, {2, 3}, {4, 6}}) == selC);
+
+        auto selEmpty = population.selectAttributeByValue<std::string>("E-mapping-good",
+                                                                       {"missing"});
+        CHECK(Selection({}) == selEmpty);
+
+        auto selAB = population.selectAttributeByValue<std::string>("E-mapping-good", {"A", "B"});
+        CHECK(Selection({{1, 2}, {3, 4}}) == selAB);
+
+        auto selAC = population.selectAttributeByValue<std::string>("E-mapping-good", {"A", "C"});
+        CHECK(Selection({{0, 1}, {2, 6}}) == selAC);
+
+        auto selABC = population.selectAttributeByValue<std::string>("E-mapping-good",
+                                                                     {"A", "B", "C"});
+        CHECK(Selection({{0, 6}}) == selABC);
+
+        auto selCBA = population.selectAttributeByValue<std::string>("E-mapping-good",
+                                                                     {"C", "B", "A"});
+        CHECK(Selection({{0, 6}}) == selCBA);
+
+        auto selC_and_missing = population.selectAttributeByValue<std::string>("E-mapping-good",
+                                                                               {"C", "missing"});
+        CHECK(Selection({{0, 1}, {2, 3}, {4, 6}}) == selC_and_missing);
+    }
 }

@@ -225,6 +225,38 @@ class TestEdgePopulation(unittest.TestCase):
     def test_select_all(self):
         self.assertEqual(self.test_obj.select_all().flat_size, 6)
 
+    def test_select_attribute_by_value(self):
+        self.assertEqual(self.test_obj.select_attribute_by_value("attr-Y",
+                                                                 (21, )),
+                         Selection(((0, 1), ))
+                         )
+
+        self.assertEqual(self.test_obj.select_attribute_by_value("attr-Y",
+                                                                 (123, )),
+                         Selection([])
+                         )
+
+        self.assertEqual(self.test_obj.select_attribute_by_value("attr-Z",
+                                                                 ("ee", )),
+                         Selection(((4, 5), ))
+                         )
+
+        self.assertEqual(self.test_obj.select_attribute_by_value("attr-Z",
+                                                                 ("missing", )),
+                         Selection([])
+                         )
+
+        self.assertEqual(self.test_obj.select_attribute_by_value("E-mapping-good",
+                                                                 ("A", "B")),
+                         Selection(((1, 2), (3, 4)))
+                         )
+
+        self.assertEqual(self.test_obj.select_attribute_by_value("E-mapping-good",
+                                                                 ("missing", )),
+                         Selection([])
+                         )
+
+
 
 class TestSpikePopulation(unittest.TestCase):
     def setUp(self):

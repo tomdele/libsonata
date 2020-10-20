@@ -162,6 +162,16 @@ class SONATA_API Population
                                 const T& defaultValue) const;
 
     /**
+     * Return a selection with values matching a vector of wanted values
+     *
+     * \param name is a string naming the attribute to examine
+     * \param wanted is a vector of values to match for the attribute
+     * \throw if there is no such attribute for the population
+     */
+    template <typename T>
+    Selection selectAttributeByValue(const std::string& name, const std::vector<T>& wanted) const;
+
+    /**
      * Get enumeration values for given attribute and {element} Selection
      *
      * See also:

@@ -1,6 +1,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 
 #include <bbp/sonata/common.h>
 #include <bbp/sonata/edges.h>
@@ -280,6 +281,24 @@ py::class_<Population, std::shared_ptr<Population>> bindPopulationClass(py::modu
             },
             "name"_a,
             "selection"_a,
+            imbueElementName(DOC_POP(enumerationValues)).c_str())
+        .def(
+            "select_attribute_by_value",
+            [](Population& obj, const std::string& name, const std::vector<std::int64_t>& wanted) {
+                Selection ret = obj.selectAttributeByValue(name, wanted);
+                return ret;
+            },
+            "name"_a,
+            "wanted"_a,
+            imbueElementName(DOC_POP(enumerationValues)).c_str())
+        .def(
+            "select_attribute_by_value",
+            [](Population& obj, const std::string& name, const std::vector<std::string>& wanted) {
+                Selection ret = obj.selectAttributeByValue(name, wanted);
+                return ret;
+            },
+            "name"_a,
+            "wanted"_a,
             imbueElementName(DOC_POP(enumerationValues)).c_str());
 }
 
