@@ -240,6 +240,18 @@ static const char *__doc_bbp_sonata_Population_name = R"doc(Name of the populati
 
 static const char *__doc_bbp_sonata_Population_selectAll = R"doc(Selection covering all elements)doc";
 
+static const char *__doc_bbp_sonata_Population_selectAttributeByValue =
+R"doc(Return a selection with values matching a vector of wanted values
+
+Parameter ``name``:
+    is a string naming the attribute to examine
+
+Parameter ``wanted``:
+    is a vector of values to match for the attribute
+
+Throws:
+    if there is no such attribute for the population)doc";
+
 static const char *__doc_bbp_sonata_Population_size = R"doc(Total number of elements)doc";
 
 static const char *__doc_bbp_sonata_ReportReader = R"doc()doc";
